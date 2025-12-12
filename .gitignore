@@ -1,0 +1,22 @@
+# Build artifacts
+/build/
+/coverage/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+*.test
+*.out
+
+# Local config
+.sekai-cli.yaml
+.sekai-cli.yml
