@@ -68,7 +68,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr create \
+          # Create PR without labels first (labels may not exist)
+          PR_URL=$(gh pr create \
             --title "${{ steps.pr-meta.outputs.title }}" \
             --body "## Summary
 
@@ -82,6 +83,10 @@ jobs:
           - [ ] Tests pass
           - [ ] Documentation updated (if needed)
           " \
-            --label "${{ steps.pr-meta.outputs.label }}" \
             --base master \
-            --draft
+            --draft)
+
+          echo "Created PR: $PR_URL"
+
+          # Try to add labels (may fail if labels don't exist, that's ok)
+          gh pr edit "$PR_URL" --add-label "${{ steps.pr-meta.outputs.label }}" || echo "Note: Could not add labels (they may not exist in repo)"
