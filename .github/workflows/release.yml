@@ -175,18 +175,7 @@ jobs:
           echo "$FORMATTED_CHANGELOG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Delete existing release (if re-running)
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ steps.create_tag.outputs.new_tag }}
-        run: |
-          # Delete existing release if it exists (for re-runs)
-          if gh release view $VERSION &>/dev/null; then
-            echo "Deleting existing release $VERSION..."
-            gh release delete $VERSION --yes --cleanup-tag=false
-          fi
-
-      - name: Create Release
+      - name: Create or Update Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.create_tag.outputs.new_tag }}
@@ -232,7 +221,17 @@ jobs:
           ```
           NOTES
 
-          gh release create $VERSION \
-            --title "Release $VERSION" \
-            --notes-file /tmp/release_notes.md \
-            dist/sekai-cli-* dist/*.deb dist/checksums.txt dist/*.sig
+          # Check if release already exists
+          if gh release view $VERSION &>/dev/null; then
+            echo "Release $VERSION exists, updating assets with --clobber..."
+            gh release upload $VERSION --clobber \
+              dist/sekai-cli-* dist/*.deb dist/checksums.txt dist/*.sig
+            # Update release notes
+            gh release edit $VERSION --notes-file /tmp/release_notes.md
+          else
+            echo "Creating new release $VERSION..."
+            gh release create $VERSION \
+              --title "Release $VERSION" \
+              --notes-file /tmp/release_notes.md \
+              dist/sekai-cli-* dist/*.deb dist/checksums.txt dist/*.sig
+          fi
