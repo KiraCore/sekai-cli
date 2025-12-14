@@ -1,0 +1,78 @@
+# CI Integration Test Scenario
+# This scenario tests basic sekai-cli functionality against a running SEKAI node
+name: ci-integration-test
+description: Integration tests for CI pipeline - verifies basic queries and transactions
+
+steps:
+  # === Status Checks ===
+  - name: Check node status
+    module: status
+    action: status
+    output: node_status
+
+  - name: Get network properties
+    module: gov
+    action: network-properties
+    output: network_props
+
+  # === Key Management ===
+  - name: List keys
+    module: keys
+    action: list
+    output: keys_list
+
+  # === Bank Module Queries ===
+  - name: Check genesis balance
+    module: bank
+    action: balances
+    params:
+      address: genesis
+    output: genesis_balance
+
+  - name: Get total supply
+    module: bank
+    action: total-supply
+    output: total_supply
+
+  # === Governance Queries ===
+  - name: List all roles
+    module: gov
+    action: all-roles
+    output: all_roles
+
+  - name: Get genesis permissions
+    module: gov
+    action: permissions
+    params:
+      address: genesis
+    output: genesis_permissions
+
+  - name: List councilors
+    module: gov
+    action: councilors
+    output: councilors
+
+  # === Token Module Queries ===
+  - name: Get token rates
+    module: tokens
+    action: all-rates
+    output: token_rates
+
+  - name: Get token black whites
+    module: tokens
+    action: token-black-whites
+    output: token_black_whites
+
+  # === Staking Queries ===
+  - name: List validators
+    module: staking
+    action: validators
+    output: validators
+
+  # === Auth Module Queries ===
+  - name: Get genesis account info
+    module: auth
+    action: account
+    params:
+      address: genesis
+    output: genesis_account

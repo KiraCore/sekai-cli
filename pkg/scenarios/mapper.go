@@ -72,6 +72,8 @@ func NewActionMapper(client sdk.Client) *ActionMapper {
 // resolveAddress resolves a key name to an address if needed.
 // If the input looks like a bech32 address (starts with "kira"), it's returned as-is.
 // Otherwise, it tries to resolve it as a key name.
+// TODO: Handle Ethereum addresses (0x...) for torii bridge integration.
+// TODO: Handle custom bech32 prefixes for minted tokens.
 func (m *ActionMapper) resolveAddress(ctx context.Context, nameOrAddress string) (string, error) {
 	// If it looks like an address, return as-is
 	if strings.HasPrefix(nameOrAddress, "kira") {
@@ -280,9 +282,13 @@ func (m *ActionMapper) executeKeys(ctx context.Context, action string, params ma
 		return nil, nil, err
 
 	case "parse":
-		address := params["address"]
-		if address == "" {
+		addrParam := params["address"]
+		if addrParam == "" {
 			return nil, nil, fmt.Errorf("keys.parse requires 'address' parameter")
+		}
+		address, err := m.resolveAddress(ctx, addrParam)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to resolve address: %w", err)
 		}
 		result, err := m.keysMod.Parse(ctx, address)
 		return result, nil, err
@@ -427,9 +433,13 @@ func (m *ActionMapper) executeAuth(ctx context.Context, action string, params ma
 
 	switch action {
 	case "account":
-		address := params["address"]
-		if address == "" {
+		addrParam := params["address"]
+		if addrParam == "" {
 			return nil, nil, fmt.Errorf("auth.account requires 'address' parameter")
+		}
+		address, err := m.resolveAddress(ctx, addrParam)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to resolve address: %w", err)
 		}
 		result, err := m.authMod.Account(ctx, address)
 		return result, nil, err
@@ -510,17 +520,25 @@ func (m *ActionMapper) executeGov(ctx context.Context, action string, params map
 		return result, nil, err
 
 	case "roles":
-		address := params["address"]
-		if address == "" {
+		addrParam := params["address"]
+		if addrParam == "" {
 			return nil, nil, fmt.Errorf("gov.roles requires 'address' parameter")
+		}
+		address, err := m.resolveAddress(ctx, addrParam)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to resolve address: %w", err)
 		}
 		result, err := m.govMod.Roles(ctx, address)
 		return result, nil, err
 
 	case "permissions":
-		address := params["address"]
-		if address == "" {
+		addrParam := params["address"]
+		if addrParam == "" {
 			return nil, nil, fmt.Errorf("gov.permissions requires 'address' parameter")
+		}
+		address, err := m.resolveAddress(ctx, addrParam)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to resolve address: %w", err)
 		}
 		result, err := m.govMod.Permissions(ctx, address)
 		return result, nil, err
@@ -586,11 +604,17 @@ func (m *ActionMapper) executeGov(ctx context.Context, action string, params map
 
 	case "role-assign", "assign-role":
 		from := params["from"]
-		address := params["address"]
+		addrParam := params["address"]
 		roleStr := params["role"]
 
-		if from == "" || address == "" || roleStr == "" {
+		if from == "" || addrParam == "" || roleStr == "" {
 			return nil, nil, fmt.Errorf("gov.role-assign requires 'from', 'address', and 'role' parameters")
+		}
+
+		// Resolve address (could be key name or actual address)
+		address, err := m.resolveAddress(ctx, addrParam)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to resolve address: %w", err)
 		}
 
 		// Parse role ID as int
@@ -1489,8 +1513,17 @@ func (m *ActionMapper) executeStaking(ctx context.Context, action string, params
 
 	switch action {
 	case "validators":
+		// Resolve address if provided
+		var address string
+		if addrParam := params["address"]; addrParam != "" {
+			var err error
+			address, err = m.resolveAddress(ctx, addrParam)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to resolve address: %w", err)
+			}
+		}
 		opts := &staking.ValidatorQueryOpts{
-			Address: params["address"],
+			Address: address,
 			ValAddr: params["val_address"],
 			Moniker: params["moniker"],
 			Status:  params["status"],
@@ -1499,12 +1532,22 @@ func (m *ActionMapper) executeStaking(ctx context.Context, action string, params
 		return result, nil, err
 
 	case "validator":
-		address := params["address"]
+		addrParam := params["address"]
 		valAddr := params["val_address"]
 		moniker := params["moniker"]
 
-		if address == "" && valAddr == "" && moniker == "" {
+		if addrParam == "" && valAddr == "" && moniker == "" {
 			return nil, nil, fmt.Errorf("staking.validator requires 'address', 'val_address', or 'moniker' parameter")
+		}
+
+		// Resolve address if provided
+		var address string
+		if addrParam != "" {
+			var err error
+			address, err = m.resolveAddress(ctx, addrParam)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to resolve address: %w", err)
+			}
 		}
 
 		opts := &staking.ValidatorQueryOpts{
