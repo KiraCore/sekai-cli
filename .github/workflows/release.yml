@@ -69,7 +69,6 @@ jobs:
         env:
           VERSION: ${{ steps.create_tag.outputs.new_tag }}
         run: |
-          # Strip 'v' prefix for deb version
           DEB_VERSION=$(echo $VERSION | sed 's/^v//')
 
           mkdir -p dist/deb/DEBIAN
@@ -108,7 +107,6 @@ jobs:
           sha256sum sekai-cli-* *.deb > checksums.txt
           cat checksums.txt
 
-          # Save checksums for release notes
           echo "checksums<<EOF" >> $GITHUB_OUTPUT
           cat checksums.txt >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -133,7 +131,6 @@ jobs:
             cosign sign-blob --key cosign.key --output-signature "${file}.sig" "$file" --yes
           done
 
-          # Securely delete the key
           dd if=/dev/zero of=cosign.key bs=1 count=$(stat --format=%s cosign.key) 2>/dev/null
           rm -f cosign.key
 
@@ -150,12 +147,10 @@ jobs:
             CHANGELOG=$(git log $PREVIOUS_TAG..HEAD --pretty=format:"- %s (%h)" --no-merges)
           fi
 
-          # Group commits by type
           FEATURES=$(echo "$CHANGELOG" | grep -i "^- feat" || echo "")
           FIXES=$(echo "$CHANGELOG" | grep -i "^- fix" || echo "")
           OTHERS=$(echo "$CHANGELOG" | grep -iv "^- \(feat\|fix\)" || echo "")
 
-          # Build formatted changelog
           FORMATTED_CHANGELOG="## What's Changed"$'\n\n'
 
           if [ ! -z "$FEATURES" ]; then
@@ -175,62 +170,64 @@ jobs:
           echo "$FORMATTED_CHANGELOG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Create Release
+      - name: Build Release Notes
+        id: release_notes
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.create_tag.outputs.new_tag }}
         run: |
           DEB_VERSION=$(echo $VERSION | sed 's/^v//')
 
-          # Always delete existing release first (handles re-runs)
-          if gh release view $VERSION &>/dev/null; then
-            echo "Deleting existing release $VERSION..."
-            gh release delete $VERSION --yes --cleanup-tag=false
-            echo "Waiting for GitHub to process deletion..."
-            sleep 10
-          fi
-
-          cat > /tmp/release_notes.md << 'NOTES'
+          cat > /tmp/release_notes.md << EOF
           ${{ steps.changelog.outputs.changelog }}
 
           ## Installation
 
           ### Linux (amd64)
-          ```bash
+          \`\`\`bash
           curl -LO https://github.com/${{ github.repository }}/releases/download/${VERSION}/sekai-cli-linux-amd64
           chmod +x sekai-cli-linux-amd64
           sudo mv sekai-cli-linux-amd64 /usr/local/bin/sekai-cli
-          ```
+          \`\`\`
 
           ### Debian/Ubuntu
-          ```bash
+          \`\`\`bash
           curl -LO https://github.com/${{ github.repository }}/releases/download/${VERSION}/sekai-cli_${DEB_VERSION}_amd64.deb
           sudo dpkg -i sekai-cli_${DEB_VERSION}_amd64.deb
-          ```
+          \`\`\`
 
           ### macOS (Apple Silicon)
-          ```bash
+          \`\`\`bash
           curl -LO https://github.com/${{ github.repository }}/releases/download/${VERSION}/sekai-cli-darwin-arm64
           chmod +x sekai-cli-darwin-arm64
           sudo mv sekai-cli-darwin-arm64 /usr/local/bin/sekai-cli
-          ```
+          \`\`\`
 
           ## Verification
 
           All artifacts are signed with cosign. Verify with:
-          ```bash
+          \`\`\`bash
           cosign verify-blob --key cosign.pub --signature sekai-cli-linux-amd64.sig sekai-cli-linux-amd64
-          ```
+          \`\`\`
 
           ## SHA256 Checksums
 
-          ```
+          \`\`\`
           ${{ steps.checksums.outputs.checksums }}
-          ```
-          NOTES
+          \`\`\`
+          EOF
 
-          echo "Creating release $VERSION..."
-          gh release create $VERSION \
-            --title "Release $VERSION" \
-            --notes-file /tmp/release_notes.md \
-            dist/sekai-cli-* dist/*.deb dist/checksums.txt dist/*.sig
+          cat /tmp/release_notes.md
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.create_tag.outputs.new_tag }}
+          name: Release ${{ steps.create_tag.outputs.new_tag }}
+          body_path: /tmp/release_notes.md
+          draft: false
+          prerelease: false
+          files: |
+            dist/sekai-cli-*
+            dist/*.deb
+            dist/checksums.txt
+            dist/*.sig
