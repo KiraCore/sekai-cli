@@ -9,7 +9,7 @@ sekaid [command]
 ```
 
 ### Global Flags
-- `--home string` - Directory for config and data (default "/.sekaid")
+- `--home string` - Directory for config and data (default "/sekai" in container via SEKAID_HOME env var)
 - `--log_format string` - The logging format (json|plain) (default "plain")
 - `--log_level string` - The logging level (trace|debug|info|warn|error|fatal|panic) (default "info")
 - `--trace` - Print out full stack trace on errors
@@ -540,7 +540,8 @@ Manages spending pools for fund distribution.
 - Most commands support both JSON and text output formats via the `--output` flag
 - Transaction commands typically require the `--chain-id` flag
 - Query commands can specify a specific node with the `--node` flag
-- The `--home` flag can be used to specify a custom configuration directory
+- The container sets `SEKAID_HOME=/sekai` by default, so `--home` flag is not needed
+- The `--home` flag can be used to override the default configuration directory if needed
 - Use `--help` on any command or subcommand to see all available flags and options
 - Commands with multiple levels of subcommands follow a hierarchical structure as shown in the tree
 - Some modules (like customgov) have extensive sub-subcommand structures for complex operations

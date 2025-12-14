@@ -1,6 +1,7 @@
 # Build artifacts
 /build/
 /coverage/
+*.deb
 
 # IDE
 .idea/
@@ -20,3 +21,12 @@ Thumbs.db
 # Local config
 .sekai-cli.yaml
 .sekai-cli.yml
+sekai-cli.json
+sekai-cli.yaml
+
+# Postman
+*.postman_collection.json
+
+# Temporary files
+/tmp/
+*.tmp

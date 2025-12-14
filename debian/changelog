@@ -1,0 +1,10 @@
+sekai-cli (0.1.0-1) unstable; urgency=medium
+
+  * Initial release
+  * Full SDK module support (22 modules, 222 commands)
+  * Scenario-based automation with YAML playbooks
+  * Key management (create, import, export, recover)
+  * Docker container integration
+  * XDG Base Directory compliance
+
+ -- KIRA Network <hello@kira.network>  Sat, 14 Dec 2025 00:00:00 +0000

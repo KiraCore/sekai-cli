@@ -1,0 +1,42 @@
+# Scenario: Transfer tokens between accounts
+name: transfer-tokens
+description: Send tokens from one account to another with balance checks
+
+variables:
+  sender: genesis
+  recipient: kira1abc123...
+  amount: 1000ukex
+
+steps:
+  - name: Check sender balance before
+    module: bank
+    action: balances
+    params:
+      address: "{{ sender }}"
+    output: sender_balance_before
+
+  - name: Send tokens
+    module: bank
+    action: send
+    params:
+      from: "{{ sender }}"
+      to: "{{ recipient }}"
+      amount: "{{ amount }}"
+    output: transfer_result
+    tx_options:
+      fees: 100ukex
+      gas: "200000"
+
+  - name: Check sender balance after
+    module: bank
+    action: balances
+    params:
+      address: "{{ sender }}"
+    output: sender_balance_after
+
+  - name: Check recipient balance
+    module: bank
+    action: balances
+    params:
+      address: "{{ recipient }}"
+    output: recipient_balance

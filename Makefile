@@ -1,14 +1,14 @@
-.PHONY: all build test clean help lint fmt docker-build docker-test docker-shell
+.PHONY: all build test clean help lint fmt docker-build docker-test docker-shell deb
 
 # Binary name
 BINARY := sekai-cli
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 BUILD_TIME := $(shell date -u '+%Y-%m-%d_%H:%M:%S')
 
-# Docker settings
-DOCKER_IMAGE := sekai-cli-builder
+# Docker settings (for docker-build)
 DOCKER_GO_VERSION := 1.21-alpine
 BUILD_DIR := ./build
+DEB_DIR := $(BUILD_DIR)/deb
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -107,12 +107,61 @@ lint: docker-lint ## Alias for docker-lint
 fmt: docker-fmt ## Alias for docker-fmt
 
 # =============================================================================
+# Integration Tests (requires kiranet network from sekin)
+# =============================================================================
+
+integration-test: ## Run integration tests against sekin-sekai-1 container
+	/usr/local/go/bin/go test -v -count=1 ./test/integration/...
+
+integration-test-single: ## Run single integration test (usage: make integration-test-single TEST=TestGovNetworkProperties)
+ifndef TEST
+	$(error TEST is required. Usage: make integration-test-single TEST=TestGovNetworkProperties)
+endif
+	/usr/local/go/bin/go test -v -count=1 -run $(TEST) ./test/integration/...
+
+integration-test-module: ## Run module tests (usage: make integration-test-module MODULE=Status)
+ifndef MODULE
+	$(error MODULE is required. Usage: make integration-test-module MODULE=Status)
+endif
+	/usr/local/go/bin/go test -v -count=1 -run "Test$(MODULE)" ./test/integration/...
+
+# =============================================================================
+# Debian Package
+# =============================================================================
+
+deb: docker-build ## Build Debian package (.deb)
+	@echo "Building Debian package..."
+	@rm -rf $(DEB_DIR)
+	@mkdir -p $(DEB_DIR)/DEBIAN
+	@mkdir -p $(DEB_DIR)/usr/bin
+	@mkdir -p $(DEB_DIR)/etc/sekai-cli
+	@mkdir -p $(DEB_DIR)/usr/share/doc/sekai-cli
+	@cp $(BUILD_DIR)/$(BINARY) $(DEB_DIR)/usr/bin/$(BINARY)
+	@chmod 755 $(DEB_DIR)/usr/bin/$(BINARY)
+	@cp README.md $(DEB_DIR)/usr/share/doc/sekai-cli/
+	@echo '{}' > $(DEB_DIR)/etc/sekai-cli/config.json.example
+	@echo "Package: sekai-cli" > $(DEB_DIR)/DEBIAN/control
+	@echo "Version: $(VERSION)" >> $(DEB_DIR)/DEBIAN/control
+	@echo "Section: utils" >> $(DEB_DIR)/DEBIAN/control
+	@echo "Priority: optional" >> $(DEB_DIR)/DEBIAN/control
+	@echo "Architecture: amd64" >> $(DEB_DIR)/DEBIAN/control
+	@echo "Recommends: docker.io | docker-ce" >> $(DEB_DIR)/DEBIAN/control
+	@echo "Maintainer: KIRA Network <hello@kira.network>" >> $(DEB_DIR)/DEBIAN/control
+	@echo "Description: Command-line interface for SEKAI blockchain" >> $(DEB_DIR)/DEBIAN/control
+	@echo " sekai-cli is a command-line tool for interacting with SEKAI blockchain." >> $(DEB_DIR)/DEBIAN/control
+	@echo "/etc/sekai-cli/config.json.example" > $(DEB_DIR)/DEBIAN/conffiles
+	@dpkg-deb --build $(DEB_DIR) $(BUILD_DIR)/$(BINARY)_$(VERSION)_amd64.deb
+	@echo "Built $(BUILD_DIR)/$(BINARY)_$(VERSION)_amd64.deb"
+
+# =============================================================================
 # Cleanup
 # =============================================================================
 
 clean: ## Clean build artifacts
 	rm -rf $(BUILD_DIR)
 	rm -rf coverage
+	rm -rf $(DEB_DIR)
+	docker compose down --remove-orphans 2>/dev/null || true
 
 # =============================================================================
 # Development helpers

@@ -1,0 +1,51 @@
+# Scenario: Create and assign a custom role
+name: setup-role
+description: Create a new role and assign it to an account
+
+variables:
+  admin: genesis
+  role_name: custom_operator
+  role_description: Custom operator role for automation
+  target_address: kira1xyz789...
+
+steps:
+  - name: Check existing roles
+    module: gov
+    action: all-roles
+    output: existing_roles
+
+  - name: Create new role
+    module: gov
+    action: role-create
+    params:
+      from: "{{ admin }}"
+      sid: "{{ role_name }}"
+      description: "{{ role_description }}"
+    output: create_result
+    tx_options:
+      fees: 100ukex
+
+  - name: Verify role created
+    module: gov
+    action: role
+    params:
+      sid: "{{ role_name }}"
+    output: new_role
+
+  - name: Assign role to target
+    module: gov
+    action: role-assign
+    params:
+      from: "{{ admin }}"
+      address: "{{ target_address }}"
+      role: "{{ role_name }}"
+    output: assign_result
+    tx_options:
+      fees: 100ukex
+
+  - name: Verify assignment
+    module: gov
+    action: roles
+    params:
+      address: "{{ target_address }}"
+    output: target_roles

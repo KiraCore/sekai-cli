@@ -1,0 +1,227 @@
+---
+name: Release
+
+on:
+  pull_request:
+    branches: [master, main]
+    types: [closed]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and Release
+    if: |
+      github.event.pull_request.merged == true &&
+      (startsWith(github.event.pull_request.head.ref, 'feature/') ||
+       startsWith(github.event.pull_request.head.ref, 'hotfix/') ||
+       startsWith(github.event.pull_request.head.ref, 'bugfix/') ||
+       startsWith(github.event.pull_request.head.ref, 'release/') ||
+       startsWith(github.event.pull_request.head.ref, 'major/'))
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.create_tag.outputs.new_tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create and Push Tag
+        id: create_tag
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          release_branches: master,main
+          default_bump: minor
+          create_annotated_tag: true
+
+      - name: Print the new tag
+        run: |
+          echo "TAG: ${{ steps.create_tag.outputs.new_tag }}"
+          VERSION=$(echo ${{ steps.create_tag.outputs.new_tag }} | sed 's/^v//')
+          echo "VERSION: $VERSION"
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache: true
+
+      - name: Build all platforms
+        env:
+          VERSION: ${{ steps.create_tag.outputs.new_tag }}
+        run: |
+          mkdir -p dist
+          BUILD_TIME=$(date -u '+%Y-%m-%d_%H:%M:%S')
+
+          for GOOS in linux darwin; do
+            for GOARCH in amd64 arm64; do
+              echo "Building $GOOS/$GOARCH..."
+              CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build \
+                -ldflags "-X main.Version=$VERSION -X main.BuildTime=$BUILD_TIME -s -w" \
+                -o dist/sekai-cli-${GOOS}-${GOARCH} ./cmd/sekai-cli
+            done
+          done
+
+      - name: Build Debian package
+        env:
+          VERSION: ${{ steps.create_tag.outputs.new_tag }}
+        run: |
+          # Strip 'v' prefix for deb version
+          DEB_VERSION=$(echo $VERSION | sed 's/^v//')
+
+          mkdir -p dist/deb/DEBIAN
+          mkdir -p dist/deb/usr/bin
+          mkdir -p dist/deb/etc/sekai-cli
+          mkdir -p dist/deb/usr/share/doc/sekai-cli
+
+          cp dist/sekai-cli-linux-amd64 dist/deb/usr/bin/sekai-cli
+          chmod 755 dist/deb/usr/bin/sekai-cli
+
+          cp README.md dist/deb/usr/share/doc/sekai-cli/
+          echo '{}' > dist/deb/etc/sekai-cli/config.json.example
+
+          cat > dist/deb/DEBIAN/control << EOF
+          Package: sekai-cli
+          Version: ${DEB_VERSION}
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Recommends: docker.io | docker-ce
+          Maintainer: KIRA Network <hello@kira.network>
+          Description: Command-line interface for SEKAI blockchain
+           sekai-cli is a command-line tool for interacting with SEKAI blockchain.
+           It provides commands for managing keys, sending transactions, querying
+           blockchain state, and executing scenario playbooks.
+          EOF
+
+          echo "/etc/sekai-cli/config.json.example" > dist/deb/DEBIAN/conffiles
+
+          dpkg-deb --build dist/deb dist/sekai-cli_${DEB_VERSION}_amd64.deb
+
+      - name: Generate checksums
+        id: checksums
+        run: |
+          cd dist
+          sha256sum sekai-cli-* *.deb > checksums.txt
+          cat checksums.txt
+
+          # Save checksums for release notes
+          echo "checksums<<EOF" >> $GITHUB_OUTPUT
+          cat checksums.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.5.0
+        with:
+          cosign-release: 'v2.2.3'
+
+      - name: Confirm cosign installation
+        run: cosign version
+
+      - name: Sign artifacts with cosign
+        env:
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          cd dist
+          echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
+
+          for file in sekai-cli-* *.deb; do
+            echo "Signing $file..."
+            cosign sign-blob --key cosign.key --output-signature "${file}.sig" "$file" --yes
+          done
+
+          # Securely delete the key
+          dd if=/dev/zero of=cosign.key bs=1 count=$(stat --format=%s cosign.key) 2>/dev/null
+          rm -f cosign.key
+
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          PREVIOUS_TAG=$(git describe --abbrev=0 --tags HEAD^ 2>/dev/null || echo "")
+
+          if [ -z "$PREVIOUS_TAG" ]; then
+            echo "No previous tag found, generating changelog from last 50 commits"
+            CHANGELOG=$(git log -50 --pretty=format:"- %s (%h)" --no-merges)
+          else
+            echo "Generating changelog from $PREVIOUS_TAG to HEAD"
+            CHANGELOG=$(git log $PREVIOUS_TAG..HEAD --pretty=format:"- %s (%h)" --no-merges)
+          fi
+
+          # Group commits by type
+          FEATURES=$(echo "$CHANGELOG" | grep -i "^- feat" || echo "")
+          FIXES=$(echo "$CHANGELOG" | grep -i "^- fix" || echo "")
+          OTHERS=$(echo "$CHANGELOG" | grep -iv "^- \(feat\|fix\)" || echo "")
+
+          # Build formatted changelog
+          FORMATTED_CHANGELOG="## What's Changed"$'\n\n'
+
+          if [ ! -z "$FEATURES" ]; then
+            FORMATTED_CHANGELOG+="### Features"$'\n'"$FEATURES"$'\n\n'
+          fi
+
+          if [ ! -z "$FIXES" ]; then
+            FORMATTED_CHANGELOG+="### Bug Fixes"$'\n'"$FIXES"$'\n\n'
+          fi
+
+          if [ ! -z "$OTHERS" ]; then
+            FORMATTED_CHANGELOG+="### Other Changes"$'\n'"$OTHERS"$'\n\n'
+          fi
+
+          echo "$FORMATTED_CHANGELOG" > /tmp/changelog.md
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$FORMATTED_CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.create_tag.outputs.new_tag }}
+        run: |
+          DEB_VERSION=$(echo $VERSION | sed 's/^v//')
+
+          cat > /tmp/release_notes.md << 'NOTES'
+          ${{ steps.changelog.outputs.changelog }}
+
+          ## Installation
+
+          ### Linux (amd64)
+          ```bash
+          curl -LO https://github.com/${{ github.repository }}/releases/download/${VERSION}/sekai-cli-linux-amd64
+          chmod +x sekai-cli-linux-amd64
+          sudo mv sekai-cli-linux-amd64 /usr/local/bin/sekai-cli
+          ```
+
+          ### Debian/Ubuntu
+          ```bash
+          curl -LO https://github.com/${{ github.repository }}/releases/download/${VERSION}/sekai-cli_${DEB_VERSION}_amd64.deb
+          sudo dpkg -i sekai-cli_${DEB_VERSION}_amd64.deb
+          ```
+
+          ### macOS (Apple Silicon)
+          ```bash
+          curl -LO https://github.com/${{ github.repository }}/releases/download/${VERSION}/sekai-cli-darwin-arm64
+          chmod +x sekai-cli-darwin-arm64
+          sudo mv sekai-cli-darwin-arm64 /usr/local/bin/sekai-cli
+          ```
+
+          ## Verification
+
+          All artifacts are signed with cosign. Verify with:
+          ```bash
+          cosign verify-blob --key cosign.pub --signature sekai-cli-linux-amd64.sig sekai-cli-linux-amd64
+          ```
+
+          ## SHA256 Checksums
+
+          ```
+          ${{ steps.checksums.outputs.checksums }}
+          ```
+          NOTES
+
+          gh release create $VERSION \
+            --title "Release $VERSION" \
+            --notes-file /tmp/release_notes.md \
+            dist/sekai-cli-* dist/*.deb dist/checksums.txt dist/*.sig

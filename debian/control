@@ -1,0 +1,26 @@
+Source: sekai-cli
+Section: utils
+Priority: optional
+Maintainer: KIRA Network <hello@kira.network>
+Build-Depends: debhelper-compat (= 13), golang-go (>= 1.21)
+Standards-Version: 4.6.0
+Homepage: https://github.com/kiracore/sekai-cli
+Vcs-Browser: https://github.com/kiracore/sekai-cli
+Vcs-Git: https://github.com/kiracore/sekai-cli.git
+Rules-Requires-Root: no
+
+Package: sekai-cli
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Recommends: ca-certificates, docker.io | docker-ce
+Description: Command-line interface for SEKAI blockchain
+ sekai-cli is a command-line tool for interacting with SEKAI blockchain.
+ It provides commands for managing keys, sending transactions, querying
+ blockchain state, and executing scenario playbooks.
+ .
+ Features:
+  - Key management (create, import, export)
+  - Transaction signing and broadcasting
+  - Query blockchain state
+  - Scenario-based automation
+  - Docker container integration

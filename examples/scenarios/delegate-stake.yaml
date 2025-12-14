@@ -1,0 +1,50 @@
+# Scenario: Delegate tokens to a validator
+name: delegate-stake
+description: Delegate tokens to a validator and check rewards
+
+variables:
+  delegator: genesis
+  validator: kiravaloper1...
+  stake_amount: 10000ukex
+
+steps:
+  - name: Check validator info
+    module: staking
+    action: validators
+    output: validators
+
+  - name: Check current staking pools
+    module: multistaking
+    action: pools
+    output: pools_before
+
+  - name: Check delegator balance before
+    module: bank
+    action: balances
+    params:
+      address: "{{ delegator }}"
+    output: balance_before
+
+  - name: Delegate to validator
+    module: multistaking
+    action: delegate
+    params:
+      from: "{{ delegator }}"
+      validator: "{{ validator }}"
+      coins: "{{ stake_amount }}"
+    output: delegate_result
+    tx_options:
+      fees: 200ukex
+      gas: "300000"
+
+  - name: Check delegator balance after
+    module: bank
+    action: balances
+    params:
+      address: "{{ delegator }}"
+    output: balance_after
+
+  - name: Check pools after delegation
+    module: multistaking
+    action: pools
+    output: pools_after

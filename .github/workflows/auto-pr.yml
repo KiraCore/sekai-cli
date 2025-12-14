@@ -1,0 +1,87 @@
+---
+name: Auto PR
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+      - 'bugfix/**'
+      - 'hotfix/**'
+      - 'release/**'
+      - 'major/**'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-pr:
+    name: Create Pull Request
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine PR type and labels
+        id: pr-meta
+        run: |
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+
+          if [[ "$BRANCH" == feature/* ]]; then
+            echo "type=feature" >> $GITHUB_OUTPUT
+            echo "label=enhancement" >> $GITHUB_OUTPUT
+            TITLE_PREFIX="feat"
+          elif [[ "$BRANCH" == bugfix/* ]]; then
+            echo "type=bugfix" >> $GITHUB_OUTPUT
+            echo "label=bug" >> $GITHUB_OUTPUT
+            TITLE_PREFIX="fix"
+          elif [[ "$BRANCH" == hotfix/* ]]; then
+            echo "type=hotfix" >> $GITHUB_OUTPUT
+            echo "label=hotfix,urgent" >> $GITHUB_OUTPUT
+            TITLE_PREFIX="hotfix"
+          elif [[ "$BRANCH" == release/* ]]; then
+            echo "type=release" >> $GITHUB_OUTPUT
+            echo "label=release" >> $GITHUB_OUTPUT
+            TITLE_PREFIX="release"
+          elif [[ "$BRANCH" == major/* ]]; then
+            echo "type=major" >> $GITHUB_OUTPUT
+            echo "label=breaking-change" >> $GITHUB_OUTPUT
+            TITLE_PREFIX="major"
+          fi
+
+          # Extract description from branch name
+          DESC=$(echo "$BRANCH" | sed 's|^[^/]*/||' | tr '-' ' ' | tr '_' ' ')
+          echo "title=$TITLE_PREFIX: $DESC" >> $GITHUB_OUTPUT
+
+      - name: Check for existing PR
+        id: check-pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          EXISTING=$(gh pr list --head "${{ steps.pr-meta.outputs.branch }}" --json number --jq '.[0].number')
+          echo "existing=$EXISTING" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        if: steps.check-pr.outputs.existing == ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --title "${{ steps.pr-meta.outputs.title }}" \
+            --body "## Summary
+
+          Auto-generated PR for branch \`${{ steps.pr-meta.outputs.branch }}\`
+
+          ## Type
+          - ${{ steps.pr-meta.outputs.type }}
+
+          ## Checklist
+          - [ ] Code compiles without errors
+          - [ ] Tests pass
+          - [ ] Documentation updated (if needed)
+          " \
+            --label "${{ steps.pr-meta.outputs.label }}" \
+            --base master \
+            --draft

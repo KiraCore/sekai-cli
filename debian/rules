@@ -1,0 +1,29 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE = 1
+export CGO_ENABLED = 0
+export GOFLAGS = -mod=vendor
+
+VERSION := $(shell dpkg-parsechangelog -S Version | cut -d- -f1)
+BUILD_TIME := $(shell date -u '+%Y-%m-%d_%H:%M:%S')
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	go build -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -s -w" \
+		-o debian/sekai-cli/usr/bin/sekai-cli ./cmd/sekai-cli
+
+override_dh_auto_test:
+	go test ./...
+
+override_dh_auto_install:
+	# Binary installed in build step
+	install -d debian/sekai-cli/etc/sekai-cli
+	install -d debian/sekai-cli/usr/share/doc/sekai-cli
+	install -m 644 README.md debian/sekai-cli/usr/share/doc/sekai-cli/
+	# Install example config
+	echo '{}' > debian/sekai-cli/etc/sekai-cli/config.json.example
+
+override_dh_auto_clean:
+	rm -rf debian/sekai-cli

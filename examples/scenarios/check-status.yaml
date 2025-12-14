@@ -1,0 +1,19 @@
+# Simple scenario: Check blockchain status
+name: check-status
+description: Query basic blockchain information
+
+steps:
+  - name: Get network properties
+    module: gov
+    action: network-properties
+    output: network_props
+
+  - name: List all roles
+    module: gov
+    action: all-roles
+    output: roles
+
+  - name: Get token rates
+    module: tokens
+    action: all-rates
+    output: token_rates

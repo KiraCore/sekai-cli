@@ -1,6 +1,7 @@
 module github.com/kiracore/sekai-cli
 
-go 1.21
+go 1.21.0
 
-// ZERO EXTERNAL DEPENDENCIES
-// This project uses only the Go standard library
+toolchain go1.21.13
+
+require github.com/goccy/go-yaml v1.15.13
