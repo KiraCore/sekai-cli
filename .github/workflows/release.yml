@@ -227,7 +227,14 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            dist/sekai-cli-*
+            dist/sekai-cli-linux-amd64
+            dist/sekai-cli-linux-arm64
+            dist/sekai-cli-darwin-amd64
+            dist/sekai-cli-darwin-arm64
+            dist/sekai-cli-linux-amd64.sig
+            dist/sekai-cli-linux-arm64.sig
+            dist/sekai-cli-darwin-amd64.sig
+            dist/sekai-cli-darwin-arm64.sig
             dist/*.deb
+            dist/*.deb.sig
             dist/checksums.txt
-            dist/*.sig
