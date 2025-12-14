@@ -9,7 +9,7 @@ A zero-dependency, SDK-first CLI for interacting with SEKAI blockchain.
 
 ## Features
 
-- **222 SDK Commands** - Full coverage of all SEKAI blockchain modules
+- **159 SDK Commands** - Full coverage of all SEKAI blockchain modules
 - **Scenario Automation** - YAML-based playbooks for complex workflows
 - **SDK-First Architecture** - Core logic in reusable `pkg/sdk/` library
 - **Zero External Dependencies** - Uses only Go standard library
@@ -189,20 +189,24 @@ sekai-cli completion fish > ~/.config/fish/completions/sekai-cli.fish
 | Module | Commands | Description |
 |--------|----------|-------------|
 | auth | 6 | Account queries |
-| bank | 10 | Token transfers |
+| bank | 7 | Token transfers and supply |
 | basket | 16 | Token baskets |
 | bridge | 4 | Cross-chain bridge |
 | collectives | 11 | Collectives management |
-| custody | 5 | Custody queries |
+| custody | 4 | Custody queries |
 | distributor | 5 | Fee distribution |
-| gov | 82 | Governance (roles, proposals, voting) |
-| keys | 16 | Key management |
+| gov | 46 | Governance (roles, proposals, voting) |
+| keys | 4 | Key management |
+| layer2 | 3 | Layer2 dApps |
 | multistaking | 13 | Multi-asset staking |
-| spending | 12 | Spending pools |
+| recovery | 4 | Recovery tokens |
+| slashing | 6 | Slashing info |
+| spending | 11 | Spending pools |
 | staking | 4 | Validator staking |
 | tokens | 7 | Token rates |
+| ubi | 4 | Universal Basic Income |
 | upgrade | 4 | Network upgrades |
-| **Total** | **222** | |
+| **Total** | **159** | |
 
 ## Development
 
