@@ -128,7 +128,7 @@ jobs:
         run: ./sekai-cli scenario run examples/scenarios/ci-integration-test.yaml
 
       - name: Run Go integration tests
-        run: go test -v -timeout 30m ./test/integration/...
+        run: go test -v -timeout 30m -p 1 ./test/integration/...
 
       - name: Collect logs on failure
         if: failure()

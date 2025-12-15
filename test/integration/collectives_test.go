@@ -26,6 +26,7 @@ func TestCollectivesAll(t *testing.T) {
 // TestCollectivesByAccount tests querying collectives by account.
 func TestCollectivesByAccount(t *testing.T) {
 	skipIfContainerNotRunning(t)
+	testAddr := getTestAddress(t)
 	client := getTestClient(t)
 	defer client.Close()
 
@@ -33,14 +34,14 @@ func TestCollectivesByAccount(t *testing.T) {
 	defer cancel()
 
 	mod := collectives.New(client)
-	result, err := mod.CollectivesByAccount(ctx, TestAddress)
+	result, err := mod.CollectivesByAccount(ctx, testAddr)
 	if err != nil {
 		// This may fail if no collectives for this account
 		t.Logf("Collectives by account query: %v (expected if no collectives)", err)
 		return
 	}
 
-	t.Logf("Collectives for %s: %s", TestAddress, string(result))
+	t.Logf("Collectives for %s: %s", testAddr, string(result))
 }
 
 // TestCollectivesProposals tests querying collectives proposals.
@@ -253,11 +254,12 @@ func TestCollectivesProposalSendDonation(t *testing.T) {
 
 	mod := collectives.New(client)
 
+	testAddr := getTestAddress(t)
 	propOpts := &collectives.ProposalSendDonationOpts{
 		Title:          "Test send donation proposal",
 		Description:    "Integration test - verify send donation proposal submission",
 		CollectiveName: "test-collective",
-		Address:        TestAddress,
+		Address:        testAddr,
 		Amounts:        "10ukex",
 	}
 

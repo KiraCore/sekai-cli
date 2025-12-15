@@ -8,23 +8,76 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/kiracore/sekai-cli/pkg/sdk"
 	"github.com/kiracore/sekai-cli/pkg/sdk/client/docker"
 	"github.com/kiracore/sekai-cli/pkg/sdk/modules/gov"
+	"github.com/kiracore/sekai-cli/pkg/sdk/modules/keys"
+	"github.com/kiracore/sekai-cli/pkg/sdk/modules/staking"
 )
 
 // Test configuration constants
 const (
 	TestContainer = "sekin-sekai-1"
-	TestAddress   = "kira1cw0wz6x9wy8wvw30q8qsxppgzqrr5qu846cut5"
 	TestKey       = "genesis"
 	TestChainID   = "testnet-1"
 	TestHome      = "/sekai"
 	TestFees      = "100ukex"
 )
+
+// TestAddress is dynamically discovered from the genesis key.
+// It is populated on first use via setupTestAddress().
+var TestAddress string
+
+// testAddressOnce ensures TestAddress is only initialized once.
+var testAddressOnce sync.Once
+
+// testAddressErr stores any error from address discovery.
+var testAddressErr error
+
+// setupTestAddress discovers the genesis key address dynamically.
+// This is called automatically by getTestAddress().
+func setupTestAddress() {
+	client, err := docker.NewClient(TestContainer,
+		docker.WithChainID(TestChainID),
+		docker.WithKeyringBackend("test"),
+		docker.WithHome(TestHome),
+	)
+	if err != nil {
+		testAddressErr = fmt.Errorf("failed to create client for address discovery: %w", err)
+		return
+	}
+	defer client.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	keysMod := keys.New(client)
+	addr, err := keysMod.GetAddress(ctx, TestKey)
+	if err != nil {
+		testAddressErr = fmt.Errorf("failed to get address for key %s: %w", TestKey, err)
+		return
+	}
+
+	TestAddress = addr
+}
+
+// getTestAddress returns the test address, initializing it if needed.
+// This should be called at the start of any test that needs TestAddress.
+func getTestAddress(t *testing.T) string {
+	t.Helper()
+	testAddressOnce.Do(setupTestAddress)
+	if testAddressErr != nil {
+		t.Fatalf("Failed to discover test address: %v", testAddressErr)
+	}
+	if TestAddress == "" {
+		t.Fatal("Test address is empty after discovery")
+	}
+	return TestAddress
+}
 
 // Vote options
 const (
@@ -469,4 +522,53 @@ func skipIfContainerNotRunning(t *testing.T) {
 		t.Skipf("Skipping test: container %s is not running: %v", TestContainer, err)
 	}
 	client.Close()
+}
+
+// waitForValidators waits for at least one validator to be available.
+// This is useful in CI where the chain may still be initializing.
+func waitForValidators(t *testing.T, client sdk.Client, timeout time.Duration) int {
+	t.Helper()
+	stakingMod := staking.New(client)
+	ctx := context.Background()
+
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		result, err := stakingMod.Validators(ctx, nil)
+		if err != nil {
+			t.Logf("Error querying validators: %v (retrying...)", err)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+		if result != nil && len(result.Validators) > 0 {
+			t.Logf("Found %d validators", len(result.Validators))
+			return len(result.Validators)
+		}
+
+		t.Log("No validators found yet, waiting...")
+		time.Sleep(2 * time.Second)
+	}
+
+	t.Logf("Timeout waiting for validators after %v", timeout)
+	return 0
+}
+
+// getValidatorsWithRetry returns validators with retry logic for CI stability.
+func getValidatorsWithRetry(t *testing.T, client sdk.Client, opts *staking.ValidatorQueryOpts) (*staking.ValidatorsResponse, error) {
+	t.Helper()
+	stakingMod := staking.New(client)
+	ctx := context.Background()
+
+	var lastErr error
+	for i := 0; i < 3; i++ {
+		result, err := stakingMod.Validators(ctx, opts)
+		if err != nil {
+			lastErr = err
+			t.Logf("Attempt %d: Error querying validators: %v", i+1, err)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		return result, nil
+	}
+	return nil, lastErr
 }

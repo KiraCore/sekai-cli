@@ -10,6 +10,7 @@ import (
 // TestRecoveryRecoveryRecord tests querying recovery record for an address.
 func TestRecoveryRecoveryRecord(t *testing.T) {
 	skipIfContainerNotRunning(t)
+	testAddr := getTestAddress(t)
 	client := getTestClient(t)
 	defer client.Close()
 
@@ -17,7 +18,7 @@ func TestRecoveryRecoveryRecord(t *testing.T) {
 	defer cancel()
 
 	mod := recovery.New(client)
-	result, err := mod.RecoveryRecord(ctx, TestAddress)
+	result, err := mod.RecoveryRecord(ctx, testAddr)
 	if err != nil {
 		// This may fail if no recovery record exists, which is expected
 		t.Logf("Recovery record query: %v (expected if no recovery record exists)", err)
@@ -30,6 +31,7 @@ func TestRecoveryRecoveryRecord(t *testing.T) {
 // TestRecoveryRecoveryToken tests querying recovery token for an address.
 func TestRecoveryRecoveryToken(t *testing.T) {
 	skipIfContainerNotRunning(t)
+	testAddr := getTestAddress(t)
 	client := getTestClient(t)
 	defer client.Close()
 
@@ -37,7 +39,7 @@ func TestRecoveryRecoveryToken(t *testing.T) {
 	defer cancel()
 
 	mod := recovery.New(client)
-	result, err := mod.RecoveryToken(ctx, TestAddress)
+	result, err := mod.RecoveryToken(ctx, testAddr)
 	if err != nil {
 		// This may fail if no recovery token exists, which is expected
 		t.Logf("Recovery token query: %v (expected if no recovery token exists)", err)
@@ -50,6 +52,7 @@ func TestRecoveryRecoveryToken(t *testing.T) {
 // TestRecoveryRRHolderRewards tests querying RR holder rewards for an address.
 func TestRecoveryRRHolderRewards(t *testing.T) {
 	skipIfContainerNotRunning(t)
+	testAddr := getTestAddress(t)
 	client := getTestClient(t)
 	defer client.Close()
 
@@ -57,7 +60,7 @@ func TestRecoveryRRHolderRewards(t *testing.T) {
 	defer cancel()
 
 	mod := recovery.New(client)
-	result, err := mod.RRHolderRewards(ctx, TestAddress)
+	result, err := mod.RRHolderRewards(ctx, testAddr)
 	if err != nil {
 		// This may fail if no RR holder rewards exist, which is expected
 		t.Logf("RR holder rewards query: %v (expected if no rewards exist)", err)

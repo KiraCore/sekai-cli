@@ -325,7 +325,8 @@ func TestBasketProposalWithdrawSurplus(t *testing.T) {
 		Description: "Integration test - verify withdraw surplus proposal",
 	}
 
-	resp, err := mod.ProposalWithdrawSurplus(ctx, TestKey, "1", TestAddress, propOpts, nil)
+	testAddr := getTestAddress(t)
+	resp, err := mod.ProposalWithdrawSurplus(ctx, TestKey, "1", testAddr, propOpts, nil)
 	if err != nil {
 		t.Logf("ProposalWithdrawSurplus may have failed (no basket): %v", err)
 		return

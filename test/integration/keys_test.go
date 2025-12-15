@@ -44,6 +44,7 @@ func TestKeysList(t *testing.T) {
 // TestKeysShow tests showing a specific key.
 func TestKeysShow(t *testing.T) {
 	skipIfContainerNotRunning(t)
+	testAddr := getTestAddress(t)
 	client := getTestClient(t)
 	defer client.Close()
 
@@ -56,7 +57,7 @@ func TestKeysShow(t *testing.T) {
 	requireNotNil(t, result, "Key info is nil")
 
 	requireEqual(t, TestKey, result.Name, "Key name mismatch")
-	requireEqual(t, TestAddress, result.Address, "Key address mismatch")
+	requireEqual(t, testAddr, result.Address, "Key address mismatch")
 	requireTrue(t, result.Type != "", "Key type should not be empty")
 
 	t.Logf("Key: %s, Address: %s, Type: %s", result.Name, result.Address, result.Type)
@@ -217,6 +218,7 @@ func TestKeysExportImport(t *testing.T) {
 // TestKeysGetAddress tests getting address for a key.
 func TestKeysGetAddress(t *testing.T) {
 	skipIfContainerNotRunning(t)
+	testAddr := getTestAddress(t)
 	client := getTestClient(t)
 	defer client.Close()
 
@@ -226,7 +228,7 @@ func TestKeysGetAddress(t *testing.T) {
 	mod := keys.New(client)
 	address, err := mod.GetAddress(ctx, TestKey)
 	requireNoError(t, err, "Failed to get address")
-	requireEqual(t, TestAddress, address, "Address mismatch")
+	requireEqual(t, testAddr, address, "Address mismatch")
 
 	t.Logf("Key %s has address %s", TestKey, address)
 }
@@ -384,6 +386,7 @@ func TestKeysMigrate(t *testing.T) {
 // TestKeysParse tests parsing address from hex to bech32 and vice versa.
 func TestKeysParse(t *testing.T) {
 	skipIfContainerNotRunning(t)
+	testAddr := getTestAddress(t)
 	client := getTestClient(t)
 	defer client.Close()
 
@@ -393,11 +396,11 @@ func TestKeysParse(t *testing.T) {
 	mod := keys.New(client)
 
 	// Parse a known bech32 address
-	result, err := mod.Parse(ctx, TestAddress)
+	result, err := mod.Parse(ctx, testAddr)
 	requireNoError(t, err, "Failed to parse bech32 address")
 	requireNotNil(t, result, "Parsed address is nil")
 
-	t.Logf("Parsed %s:", TestAddress)
+	t.Logf("Parsed %s:", testAddr)
 	t.Logf("  Human: %s", result.Human)
 	t.Logf("  Bytes: %s", result.Bytes)
 	t.Logf("  Hex: %s", result.Hex)

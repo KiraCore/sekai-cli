@@ -10,6 +10,7 @@ import (
 // TestBridgeGetCosmosEthereum tests querying cosmos to ethereum changes.
 func TestBridgeGetCosmosEthereum(t *testing.T) {
 	skipIfContainerNotRunning(t)
+	testAddr := getTestAddress(t)
 	client := getTestClient(t)
 	defer client.Close()
 
@@ -17,7 +18,7 @@ func TestBridgeGetCosmosEthereum(t *testing.T) {
 	defer cancel()
 
 	mod := bridge.New(client)
-	result, err := mod.GetCosmosEthereum(ctx, TestAddress)
+	result, err := mod.GetCosmosEthereum(ctx, testAddr)
 	if err != nil {
 		// This may fail if no bridge changes exist
 		t.Logf("Cosmos to Ethereum query: %v (expected if no changes)", err)
@@ -30,6 +31,7 @@ func TestBridgeGetCosmosEthereum(t *testing.T) {
 // TestBridgeGetEthereumCosmos tests querying ethereum to cosmos changes.
 func TestBridgeGetEthereumCosmos(t *testing.T) {
 	skipIfContainerNotRunning(t)
+	testAddr := getTestAddress(t)
 	client := getTestClient(t)
 	defer client.Close()
 
@@ -37,7 +39,7 @@ func TestBridgeGetEthereumCosmos(t *testing.T) {
 	defer cancel()
 
 	mod := bridge.New(client)
-	result, err := mod.GetEthereumCosmos(ctx, TestAddress)
+	result, err := mod.GetEthereumCosmos(ctx, testAddr)
 	if err != nil {
 		// This may fail if no bridge changes exist
 		t.Logf("Ethereum to Cosmos query: %v (expected if no changes)", err)
@@ -59,7 +61,8 @@ func TestBridgeChangeCosmosEthereum(t *testing.T) {
 	mod := bridge.New(client)
 
 	// Use test values
-	cosmosAddress := TestAddress
+	testAddr := getTestAddress(t)
+	cosmosAddress := testAddr
 	ethAddress := "0x1234567890123456789012345678901234567890"
 	amount := "100ukex"
 
@@ -88,7 +91,8 @@ func TestBridgeChangeEthereumCosmos(t *testing.T) {
 	mod := bridge.New(client)
 
 	// Use test values
-	cosmosAddress := TestAddress
+	testAddr := getTestAddress(t)
+	cosmosAddress := testAddr
 	ethTxHash := "0x" + generateUniqueID("txhash")
 	amount := "100ukex"
 
