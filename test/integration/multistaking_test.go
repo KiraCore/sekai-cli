@@ -30,6 +30,7 @@ func TestMultistakingPools(t *testing.T) {
 // TestMultistakingOutstandingRewards tests querying outstanding rewards.
 func TestMultistakingOutstandingRewards(t *testing.T) {
 	skipIfContainerNotRunning(t)
+	testAddr := getTestAddress(t)
 	client := getTestClient(t)
 	defer client.Close()
 
@@ -37,19 +38,20 @@ func TestMultistakingOutstandingRewards(t *testing.T) {
 	defer cancel()
 
 	mod := multistaking.New(client)
-	result, err := mod.OutstandingRewards(ctx, TestAddress)
+	result, err := mod.OutstandingRewards(ctx, testAddr)
 	if err != nil {
 		// This may fail if no rewards exist
 		t.Logf("Outstanding rewards query: %v (expected if no rewards)", err)
 		return
 	}
 
-	t.Logf("Outstanding rewards for %s: %+v", TestAddress, result)
+	t.Logf("Outstanding rewards for %s: %+v", testAddr, result)
 }
 
 // TestMultistakingCompoundInfo tests querying compound info.
 func TestMultistakingCompoundInfo(t *testing.T) {
 	skipIfContainerNotRunning(t)
+	testAddr := getTestAddress(t)
 	client := getTestClient(t)
 	defer client.Close()
 
@@ -57,14 +59,14 @@ func TestMultistakingCompoundInfo(t *testing.T) {
 	defer cancel()
 
 	mod := multistaking.New(client)
-	result, err := mod.CompoundInfo(ctx, TestAddress)
+	result, err := mod.CompoundInfo(ctx, testAddr)
 	if err != nil {
 		// This may fail if no compound info exists
 		t.Logf("Compound info query: %v (expected if no compound info)", err)
 		return
 	}
 
-	t.Logf("Compound info for %s: %+v", TestAddress, result)
+	t.Logf("Compound info for %s: %+v", testAddr, result)
 }
 
 // TestMultistakingStakingPoolDelegators tests querying staking pool delegators.
@@ -118,13 +120,14 @@ func TestMultistakingUndelegations(t *testing.T) {
 	}
 
 	poolID := pools.Pools[0].ID
-	result, err := mod.Undelegations(ctx, TestAddress, poolID)
+	testAddr := getTestAddress(t)
+	result, err := mod.Undelegations(ctx, testAddr, poolID)
 	if err != nil {
 		t.Logf("Undelegations query: %v (expected if no undelegations)", err)
 		return
 	}
 
-	t.Logf("Undelegations for %s in pool %s: %+v", TestAddress, poolID, result)
+	t.Logf("Undelegations for %s in pool %s: %+v", testAddr, poolID, result)
 }
 
 // TestMultistakingDelegate tests delegating tokens.

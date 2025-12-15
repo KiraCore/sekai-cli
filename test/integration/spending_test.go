@@ -56,6 +56,7 @@ func TestSpendingPoolByName(t *testing.T) {
 // TestSpendingPoolsByAccount tests querying pools by account.
 func TestSpendingPoolsByAccount(t *testing.T) {
 	skipIfContainerNotRunning(t)
+	testAddr := getTestAddress(t)
 	client := getTestClient(t)
 	defer client.Close()
 
@@ -63,10 +64,10 @@ func TestSpendingPoolsByAccount(t *testing.T) {
 	defer cancel()
 
 	mod := spending.New(client)
-	result, err := mod.PoolsByAccount(ctx, TestAddress)
+	result, err := mod.PoolsByAccount(ctx, testAddr)
 	requireNoError(t, err, "Failed to query pools by account")
 
-	t.Logf("Pools for %s: %+v", TestAddress, result)
+	t.Logf("Pools for %s: %+v", testAddr, result)
 }
 
 // TestSpendingCreatePool tests creating a spending pool.
@@ -83,6 +84,7 @@ func TestSpendingCreatePool(t *testing.T) {
 	mod := spending.New(client)
 
 	poolName := generateUniqueID("testpool")
+	testAddr := getTestAddress(t)
 	poolOpts := &spending.CreateSpendingPoolOpts{
 		Name:          poolName,
 		ClaimStart:    0,
@@ -91,8 +93,8 @@ func TestSpendingCreatePool(t *testing.T) {
 		VoteQuorum:    "33",
 		VotePeriod:    60,
 		VoteEnactment: 30,
-		Owners:        TestAddress,
-		Beneficiaries: TestAddress,
+		Owners:        testAddr,
+		Beneficiaries: testAddr,
 	}
 
 	// This may fail due to missing beneficiary-account-weights, but verifies SDK call
@@ -270,9 +272,10 @@ func TestSpendingProposalWithdraw(t *testing.T) {
 	}
 
 	poolName := names.Names[0]
+	testAddr := getTestAddress(t)
 	propOpts := &spending.ProposalSpendingPoolWithdrawOpts{
 		Name:                poolName,
-		BeneficiaryAccounts: TestAddress,
+		BeneficiaryAccounts: testAddr,
 		Amount:              "100ukex",
 		Title:               "Test withdraw proposal",
 		Description:         "Integration test - verify withdraw proposal submission",

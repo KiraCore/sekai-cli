@@ -78,6 +78,7 @@ func TestDistributorYearStartSnapshot(t *testing.T) {
 // TestDistributorSnapshotPeriodPerformance tests querying snapshot period performance.
 func TestDistributorSnapshotPeriodPerformance(t *testing.T) {
 	skipIfContainerNotRunning(t)
+	testAddr := getTestAddress(t)
 	client := getTestClient(t)
 	defer client.Close()
 
@@ -86,7 +87,7 @@ func TestDistributorSnapshotPeriodPerformance(t *testing.T) {
 
 	mod := distributor.New(client)
 	// Use test address as a validator address
-	result, err := mod.SnapshotPeriodPerformance(ctx, TestAddress)
+	result, err := mod.SnapshotPeriodPerformance(ctx, testAddr)
 	if err != nil {
 		// This may fail if the address is not a validator, which is expected
 		t.Logf("Snapshot period performance query: %v (may be expected if not a validator)", err)

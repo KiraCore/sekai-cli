@@ -11,6 +11,7 @@ import (
 // TestAuthAccount tests querying a single account by address.
 func TestAuthAccount(t *testing.T) {
 	skipIfContainerNotRunning(t)
+	testAddr := getTestAddress(t)
 	client := getTestClient(t)
 	defer client.Close()
 
@@ -18,12 +19,12 @@ func TestAuthAccount(t *testing.T) {
 	defer cancel()
 
 	mod := auth.New(client)
-	result, err := mod.Account(ctx, TestAddress)
+	result, err := mod.Account(ctx, testAddr)
 	requireNoError(t, err, "Failed to query account")
 	requireNotNil(t, result, "Account is nil")
 
 	// Verify account has expected fields
-	requireEqual(t, TestAddress, result.Address, "Address mismatch")
+	requireEqual(t, testAddr, result.Address, "Address mismatch")
 	requireTrue(t, result.AccountNumber != "", "Account number should not be empty")
 
 	t.Logf("Account: %s, Number: %s, Sequence: %s", result.Address, result.AccountNumber, result.Sequence)
@@ -32,6 +33,7 @@ func TestAuthAccount(t *testing.T) {
 // TestAuthAccounts tests querying all accounts.
 func TestAuthAccounts(t *testing.T) {
 	skipIfContainerNotRunning(t)
+	testAddr := getTestAddress(t)
 	client := getTestClient(t)
 	defer client.Close()
 
@@ -51,7 +53,7 @@ func TestAuthAccounts(t *testing.T) {
 	// Verify the test address is in the list
 	found := false
 	for _, acc := range result.Accounts {
-		if acc.Address == TestAddress {
+		if acc.Address == testAddr {
 			found = true
 			break
 		}
@@ -62,6 +64,7 @@ func TestAuthAccounts(t *testing.T) {
 // TestAuthAddressByAccNum tests querying an address by account number.
 func TestAuthAddressByAccNum(t *testing.T) {
 	skipIfContainerNotRunning(t)
+	testAddr := getTestAddress(t)
 	client := getTestClient(t)
 	defer client.Close()
 
@@ -71,7 +74,7 @@ func TestAuthAddressByAccNum(t *testing.T) {
 	mod := auth.New(client)
 
 	// First get the account to know its account number
-	acc, err := mod.Account(ctx, TestAddress)
+	acc, err := mod.Account(ctx, testAddr)
 	requireNoError(t, err, "Failed to query account")
 	requireNotNil(t, acc, "Account is nil")
 
@@ -80,7 +83,7 @@ func TestAuthAddressByAccNum(t *testing.T) {
 	requireNoError(t, err, "Failed to query address by account number")
 	requireNotNil(t, result, "Result is nil")
 
-	requireEqual(t, TestAddress, result.AccountAddress, "Address mismatch")
+	requireEqual(t, testAddr, result.AccountAddress, "Address mismatch")
 	t.Logf("Account number %s maps to address %s", acc.AccountNumber, result.AccountAddress)
 }
 

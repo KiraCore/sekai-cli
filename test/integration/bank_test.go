@@ -13,6 +13,7 @@ import (
 // TestBankBalances tests querying all balances for an address.
 func TestBankBalances(t *testing.T) {
 	skipIfContainerNotRunning(t)
+	testAddr := getTestAddress(t)
 	client := getTestClient(t)
 	defer client.Close()
 
@@ -20,10 +21,10 @@ func TestBankBalances(t *testing.T) {
 	defer cancel()
 
 	mod := bank.New(client)
-	result, err := mod.Balances(ctx, TestAddress)
+	result, err := mod.Balances(ctx, testAddr)
 	requireNoError(t, err, "Failed to query balances")
 
-	t.Logf("Address %s has %d token types", TestAddress, len(result))
+	t.Logf("Address %s has %d token types", testAddr, len(result))
 	for _, coin := range result {
 		t.Logf("  %s: %s", coin.Denom, coin.Amount)
 	}
@@ -32,6 +33,7 @@ func TestBankBalances(t *testing.T) {
 // TestBankBalance tests querying balance for a specific denom.
 func TestBankBalance(t *testing.T) {
 	skipIfContainerNotRunning(t)
+	testAddr := getTestAddress(t)
 	client := getTestClient(t)
 	defer client.Close()
 
@@ -39,17 +41,18 @@ func TestBankBalance(t *testing.T) {
 	defer cancel()
 
 	mod := bank.New(client)
-	result, err := mod.Balance(ctx, TestAddress, "ukex")
+	result, err := mod.Balance(ctx, testAddr, "ukex")
 	requireNoError(t, err, "Failed to query balance")
 	requireNotNil(t, result, "Balance is nil")
 
 	requireEqual(t, "ukex", result.Denom, "Denom mismatch")
-	t.Logf("Address %s has %s ukex", TestAddress, result.Amount)
+	t.Logf("Address %s has %s ukex", testAddr, result.Amount)
 }
 
 // TestBankSpendableBalances tests querying spendable balances.
 func TestBankSpendableBalances(t *testing.T) {
 	skipIfContainerNotRunning(t)
+	testAddr := getTestAddress(t)
 	client := getTestClient(t)
 	defer client.Close()
 
@@ -57,10 +60,10 @@ func TestBankSpendableBalances(t *testing.T) {
 	defer cancel()
 
 	mod := bank.New(client)
-	result, err := mod.SpendableBalances(ctx, TestAddress)
+	result, err := mod.SpendableBalances(ctx, testAddr)
 	requireNoError(t, err, "Failed to query spendable balances")
 
-	t.Logf("Address %s has %d spendable token types", TestAddress, len(result))
+	t.Logf("Address %s has %d spendable token types", testAddr, len(result))
 	for _, coin := range result {
 		t.Logf("  %s: %s", coin.Denom, coin.Amount)
 	}
@@ -154,7 +157,8 @@ func TestBankSend(t *testing.T) {
 	t.Logf("Recipient address: %s", recipientAddr)
 
 	// Get initial balances
-	senderBalanceBefore, err := bankMod.Balance(ctx, TestAddress, "ukex")
+	testAddr := getTestAddress(t)
+	senderBalanceBefore, err := bankMod.Balance(ctx, testAddr, "ukex")
 	requireNoError(t, err, "Failed to query sender balance")
 	t.Logf("Sender balance before: %s ukex", senderBalanceBefore.Amount)
 

@@ -110,6 +110,7 @@ func TestGovRole(t *testing.T) {
 // TestGovRoles tests querying roles for an address.
 func TestGovRoles(t *testing.T) {
 	skipIfContainerNotRunning(t)
+	testAddr := getTestAddress(t)
 	client := getTestClient(t)
 	defer client.Close()
 
@@ -117,15 +118,16 @@ func TestGovRoles(t *testing.T) {
 	defer cancel()
 
 	mod := gov.New(client)
-	result, err := mod.Roles(ctx, TestAddress)
+	result, err := mod.Roles(ctx, testAddr)
 	requireNoError(t, err, "Failed to query roles")
 
-	t.Logf("Address %s has %d roles: %v", TestAddress, len(result), result)
+	t.Logf("Address %s has %d roles: %v", testAddr, len(result), result)
 }
 
 // TestGovPermissions tests querying permissions for an address.
 func TestGovPermissions(t *testing.T) {
 	skipIfContainerNotRunning(t)
+	testAddr := getTestAddress(t)
 	client := getTestClient(t)
 	defer client.Close()
 
@@ -133,12 +135,12 @@ func TestGovPermissions(t *testing.T) {
 	defer cancel()
 
 	mod := gov.New(client)
-	result, err := mod.Permissions(ctx, TestAddress)
+	result, err := mod.Permissions(ctx, testAddr)
 	requireNoError(t, err, "Failed to query permissions")
 	requireNotNil(t, result, "Permissions is nil")
 
 	t.Logf("Address %s permissions: whitelist=%d, blacklist=%d",
-		TestAddress, len(result.Whitelist), len(result.Blacklist))
+		testAddr, len(result.Whitelist), len(result.Blacklist))
 }
 
 // TestGovExecutionFee tests querying execution fee for a transaction type.
@@ -390,9 +392,10 @@ func TestGovProposalVote(t *testing.T) {
 	t.Logf("Votes after: %d", len(votesAfter))
 
 	// Verify our vote exists
+	testAddr := getTestAddress(t)
 	found := false
 	for _, v := range votesAfter {
-		if v.Voter == TestAddress {
+		if v.Voter == testAddr {
 			found = true
 			t.Logf("Found our vote: proposal=%s, voter=%s, option=%s", v.ProposalID, v.Voter, v.Option)
 			break
@@ -425,9 +428,10 @@ func TestGovRegisterIdentityRecords(t *testing.T) {
 	time.Sleep(7 * time.Second)
 
 	// Query identity records for our address
-	records, err := mod.IdentityRecordsByAddress(ctx, TestAddress)
+	testAddr := getTestAddress(t)
+	records, err := mod.IdentityRecordsByAddress(ctx, testAddr)
 	requireNoError(t, err, "Failed to query identity records by address")
-	t.Logf("Found %d identity records for %s", len(records), TestAddress)
+	t.Logf("Found %d identity records for %s", len(records), testAddr)
 }
 
 // TestGovPollCreateAndVote tests creating a poll and voting on it.
@@ -462,9 +466,10 @@ func TestGovPollCreateAndVote(t *testing.T) {
 	time.Sleep(7 * time.Second)
 
 	// Query polls for our address
-	polls, err := mod.Polls(ctx, TestAddress)
+	testAddr := getTestAddress(t)
+	polls, err := mod.Polls(ctx, testAddr)
 	requireNoError(t, err, "Failed to query polls")
-	t.Logf("Found %d polls for %s", len(polls), TestAddress)
+	t.Logf("Found %d polls for %s", len(polls), testAddr)
 }
 
 // TestGovRoleOperations tests role creation and assignment.
@@ -685,7 +690,8 @@ func TestGovPollVotes(t *testing.T) {
 	mod := gov.New(client)
 
 	// First get polls
-	polls, err := mod.Polls(ctx, TestAddress)
+	testAddr := getTestAddress(t)
+	polls, err := mod.Polls(ctx, testAddr)
 	if err != nil || len(polls) == 0 {
 		t.Log("No polls found, skipping poll votes test")
 		return
@@ -780,6 +786,7 @@ func TestGovIdentityRecordVerifyRequest(t *testing.T) {
 // TestGovIdentityRecordVerifyRequestsByApprover tests querying by approver.
 func TestGovIdentityRecordVerifyRequestsByApprover(t *testing.T) {
 	skipIfContainerNotRunning(t)
+	testAddr := getTestAddress(t)
 	client := getTestClient(t)
 	defer client.Close()
 
@@ -787,7 +794,7 @@ func TestGovIdentityRecordVerifyRequestsByApprover(t *testing.T) {
 	defer cancel()
 
 	mod := gov.New(client)
-	result, err := mod.IdentityRecordVerifyRequestsByApprover(ctx, TestAddress)
+	result, err := mod.IdentityRecordVerifyRequestsByApprover(ctx, testAddr)
 	if err != nil {
 		t.Logf("Identity record verify requests by approver query: %v (may be expected)", err)
 		return
@@ -799,6 +806,7 @@ func TestGovIdentityRecordVerifyRequestsByApprover(t *testing.T) {
 // TestGovIdentityRecordVerifyRequestsByRequester tests querying by requester.
 func TestGovIdentityRecordVerifyRequestsByRequester(t *testing.T) {
 	skipIfContainerNotRunning(t)
+	testAddr := getTestAddress(t)
 	client := getTestClient(t)
 	defer client.Close()
 
@@ -806,7 +814,7 @@ func TestGovIdentityRecordVerifyRequestsByRequester(t *testing.T) {
 	defer cancel()
 
 	mod := gov.New(client)
-	result, err := mod.IdentityRecordVerifyRequestsByRequester(ctx, TestAddress)
+	result, err := mod.IdentityRecordVerifyRequestsByRequester(ctx, testAddr)
 	if err != nil {
 		t.Logf("Identity record verify requests by requester query: %v (may be expected)", err)
 		return
@@ -953,7 +961,8 @@ func TestGovPermissionWhitelist(t *testing.T) {
 
 	mod := gov.New(client)
 	// Permission 999 is a high number unlikely to conflict
-	resp, err := mod.PermissionWhitelist(ctx, TestKey, TestAddress, 999, nil)
+	testAddr := getTestAddress(t)
+	resp, err := mod.PermissionWhitelist(ctx, TestKey, testAddr, 999, nil)
 	if err != nil {
 		t.Logf("Permission whitelist: %v (may be expected)", err)
 		return
@@ -975,7 +984,8 @@ func TestGovPermissionBlacklist(t *testing.T) {
 
 	mod := gov.New(client)
 	// Permission 998 is a high number unlikely to conflict
-	resp, err := mod.PermissionBlacklist(ctx, TestKey, TestAddress, 998, nil)
+	testAddr := getTestAddress(t)
+	resp, err := mod.PermissionBlacklist(ctx, TestKey, testAddr, 998, nil)
 	if err != nil {
 		t.Logf("Permission blacklist: %v (may be expected)", err)
 		return
@@ -997,7 +1007,8 @@ func TestGovPermissionRemoveWhitelisted(t *testing.T) {
 
 	mod := gov.New(client)
 	// Try to remove permission 999 we might have added
-	resp, err := mod.PermissionRemoveWhitelisted(ctx, TestKey, TestAddress, 999, nil)
+	testAddr := getTestAddress(t)
+	resp, err := mod.PermissionRemoveWhitelisted(ctx, TestKey, testAddr, 999, nil)
 	if err != nil {
 		t.Logf("Permission remove whitelisted: %v (may not exist)", err)
 		return
@@ -1019,7 +1030,8 @@ func TestGovPermissionRemoveBlacklisted(t *testing.T) {
 
 	mod := gov.New(client)
 	// Try to remove permission 998 we might have added
-	resp, err := mod.PermissionRemoveBlacklisted(ctx, TestKey, TestAddress, 998, nil)
+	testAddr := getTestAddress(t)
+	resp, err := mod.PermissionRemoveBlacklisted(ctx, TestKey, testAddr, 998, nil)
 	if err != nil {
 		t.Logf("Permission remove blacklisted: %v (may not exist)", err)
 		return
@@ -1043,7 +1055,8 @@ func TestGovRoleAssign(t *testing.T) {
 
 	mod := gov.New(client)
 	// Assign role 2 (validator) to test address
-	resp, err := mod.RoleAssign(ctx, TestKey, TestAddress, 2, nil)
+	testAddr := getTestAddress(t)
+	resp, err := mod.RoleAssign(ctx, TestKey, testAddr, 2, nil)
 	if err != nil {
 		t.Logf("Role assign: %v (may already be assigned)", err)
 		return
@@ -1065,7 +1078,8 @@ func TestGovRoleUnassign(t *testing.T) {
 
 	mod := gov.New(client)
 	// Unassign role 2 we might have assigned
-	resp, err := mod.RoleUnassign(ctx, TestKey, TestAddress, 2, nil)
+	testAddr := getTestAddress(t)
+	resp, err := mod.RoleUnassign(ctx, TestKey, testAddr, 2, nil)
 	if err != nil {
 		t.Logf("Role unassign: %v (may not be assigned)", err)
 		return
@@ -1198,7 +1212,8 @@ func TestGovPollVote(t *testing.T) {
 	mod := gov.New(client)
 
 	// First get polls
-	polls, err := mod.Polls(ctx, TestAddress)
+	testAddr := getTestAddress(t)
+	polls, err := mod.Polls(ctx, testAddr)
 	if err != nil || len(polls) == 0 {
 		t.Log("No polls found, skipping poll vote test")
 		return
@@ -1253,7 +1268,8 @@ func TestGovRequestIdentityRecordVerify(t *testing.T) {
 	mod := gov.New(client)
 
 	// First get identity records
-	records, err := mod.IdentityRecordsByAddress(ctx, TestAddress)
+	testAddr := getTestAddress(t)
+	records, err := mod.IdentityRecordsByAddress(ctx, testAddr)
 	if err != nil || len(records) == 0 {
 		t.Log("No identity records found, skipping verify request test")
 		return
@@ -1261,7 +1277,7 @@ func TestGovRequestIdentityRecordVerify(t *testing.T) {
 
 	// Request verification for first record
 	recordID := records[0].ID
-	resp, err := mod.RequestIdentityRecordVerify(ctx, TestKey, TestAddress, recordID, "100ukex", nil)
+	resp, err := mod.RequestIdentityRecordVerify(ctx, TestKey, testAddr, recordID, "100ukex", nil)
 	if err != nil {
 		t.Logf("Request identity record verify: %v (may be expected)", err)
 		return
@@ -1541,7 +1557,8 @@ func TestGovProposalAssignRole(t *testing.T) {
 	waitForBlocks(t, 1)
 
 	mod := gov.New(client)
-	resp, err := mod.ProposalAssignRole(ctx, TestKey, TestAddress, "2", "Test assign role", "Assign validator role", nil)
+	testAddr := getTestAddress(t)
+	resp, err := mod.ProposalAssignRole(ctx, TestKey, testAddr, "2", "Test assign role", "Assign validator role", nil)
 	if err != nil {
 		t.Logf("Proposal assign role: %v", err)
 		return
@@ -1562,7 +1579,8 @@ func TestGovProposalUnassignRole(t *testing.T) {
 	waitForBlocks(t, 1)
 
 	mod := gov.New(client)
-	resp, err := mod.ProposalUnassignRole(ctx, TestKey, TestAddress, "2", "Test unassign role", "Unassign validator role", nil)
+	testAddr := getTestAddress(t)
+	resp, err := mod.ProposalUnassignRole(ctx, TestKey, testAddr, "2", "Test unassign role", "Unassign validator role", nil)
 	if err != nil {
 		t.Logf("Proposal unassign role: %v", err)
 		return
@@ -1583,10 +1601,11 @@ func TestGovProposalWhitelistAccountPermission(t *testing.T) {
 	waitForBlocks(t, 1)
 
 	mod := gov.New(client)
+	testAddr := getTestAddress(t)
 	propOpts := &gov.ProposalAccountPermissionOpts{
 		Title:       "Test whitelist permission",
 		Description: "Integration test",
-		Addr:        TestAddress,
+		Addr:        testAddr,
 	}
 	resp, err := mod.ProposalWhitelistAccountPermission(ctx, TestKey, 100, propOpts, nil)
 	if err != nil {
@@ -1609,10 +1628,11 @@ func TestGovProposalBlacklistAccountPermission(t *testing.T) {
 	waitForBlocks(t, 1)
 
 	mod := gov.New(client)
+	testAddr := getTestAddress(t)
 	propOpts := &gov.ProposalAccountPermissionOpts{
 		Title:       "Test blacklist permission",
 		Description: "Integration test",
-		Addr:        TestAddress,
+		Addr:        testAddr,
 	}
 	resp, err := mod.ProposalBlacklistAccountPermission(ctx, TestKey, 101, propOpts, nil)
 	if err != nil {
@@ -1635,10 +1655,11 @@ func TestGovProposalRemoveWhitelistedAccountPermission(t *testing.T) {
 	waitForBlocks(t, 1)
 
 	mod := gov.New(client)
+	testAddr := getTestAddress(t)
 	propOpts := &gov.ProposalAccountPermissionOpts{
 		Title:       "Test remove whitelisted permission",
 		Description: "Integration test",
-		Addr:        TestAddress,
+		Addr:        testAddr,
 	}
 	resp, err := mod.ProposalRemoveWhitelistedAccountPermission(ctx, TestKey, 100, propOpts, nil)
 	if err != nil {
@@ -1661,10 +1682,11 @@ func TestGovProposalRemoveBlacklistedAccountPermission(t *testing.T) {
 	waitForBlocks(t, 1)
 
 	mod := gov.New(client)
+	testAddr := getTestAddress(t)
 	propOpts := &gov.ProposalAccountPermissionOpts{
 		Title:       "Test remove blacklisted permission",
 		Description: "Integration test",
-		Addr:        TestAddress,
+		Addr:        testAddr,
 	}
 	resp, err := mod.ProposalRemoveBlacklistedAccountPermission(ctx, TestKey, 101, propOpts, nil)
 	if err != nil {
